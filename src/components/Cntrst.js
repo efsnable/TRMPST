@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import LevelGenerator from "./LevelGenerator";
+import AssetLoader from "./AssetLoader";
 
 const style = {
     height: "80vh" // we can control scene size by setting container dimensions
@@ -19,7 +20,9 @@ export class Cntrst extends Component {
     
       _onMouseMove(e) {
         let newLane = Math.floor(this.lanes.length * e.clientX/window.innerWidth);
-
+        if(newLane != this.state.currentLane){
+        console.log("new lane:", newLane);
+        }
         this.setState({ x: e.clientX/window.innerWidth, y: e.clientY / window.innerHeight, currentLane: newLane});
         // console.log("window",  [window.innerWidth,  window.innerHeight ]);
         // console.log("mouse", [e.clientX, e.clientY ]);
@@ -65,6 +68,32 @@ export class Cntrst extends Component {
     // Code below is taken from Three.js BoxGeometry example
     // https://threejs.org/docs/#api/en/geometries/BoxGeometry
     addCustomSceneObjects = () => {
+        // load player model
+
+        let playerEnvTexture = new THREE.TextureLoader().setPath("assets/").load('env4.jpg',  () => {
+            const rt = new THREE.WebGLCubeRenderTarget(playerEnvTexture.image.height);
+            rt.fromEquirectangularTexture(this.renderer, playerEnvTexture);
+            AssetLoader.loadGlTF("assets/player/", "scene.gltf").then((gltf) => {
+                this.playerGltf = gltf.scene.children[0];
+
+                gltf.scene.traverse((node) => {
+                     if(node.isMesh) {node.material.envMap = rt;
+                        this.playerGltf = node;
+                     console.log("node found", node, gltf);
+                     }
+                });
+                //this.scene.background = rt;
+                //console.log(gltf);
+                this.playerGltf.rotation.y = -1;
+                this.playerGltf.scale.set(0.05, 0.05, 0.05);
+                this.scene.add(this.playerGltf);
+                //let box = new THREE.BoxHelper(this.playerGltf, 0xffff00);
+                //this.scene.add(box);
+
+            });
+    
+          });
+        
 
         const material = new THREE.MeshPhongMaterial({
             color: 0x156289,
@@ -173,7 +202,7 @@ export class Cntrst extends Component {
 
         });
 
-
+        
         this.scene.add(this.lanesGroup);
         let groupBox = new THREE.Box3().setFromObject(this.lanesGroup);
        // console.log("group size", groupBox.getSize());
@@ -202,8 +231,10 @@ export class Cntrst extends Component {
         lights[2].position.set(-100, -200, -100);
 
         this.scene.add(lights[0]);
-        // this.scene.add(lights[1]);
-        // this.scene.add(lights[2]);
+        this.scene.add(lights[1]);
+        this.scene.add(lights[2]);
+        this.scene.add( new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 ));
+        // this.scene.environment = playerEnvTexture
     };
 
     startAnimationLoop = () => {
@@ -214,10 +245,16 @@ export class Cntrst extends Component {
         for (let i = 0; i < this.lanes.length; i++) {
             const lane = this.lanes[i];
             if(lane!= this.lanes[this.state.currentLane]){
-                    lane.material.opacity = 0.1;
+                    lane.material.opacity = 0.05;
             }else{
                 lane.material.opacity = 1.0;
-            }
+                if(this.playerGltf){
+                    console.log("lane pos", lane.position);
+                    this.playerGltf.position.x = lane.position.x;
+                    this.playerGltf.position.y = lane.position.y;
+                    this.playerGltf.rotation.z = lane.rotation.z;
+                }
+        }
         }
 
 
