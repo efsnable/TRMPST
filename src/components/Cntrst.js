@@ -91,6 +91,10 @@ export class Cntrst extends Component {
             let len = Math.sqrt(dx * dx + dy * dy);
             console.log(len, " len from ", coords)
             var geometry = new THREE.BoxBufferGeometry(0.0, len, 12);
+            geometry.computeBoundingBox();
+            console.log("size", geometry.boundingBox.getSize());
+           
+            geometry.translate(0-geometry.boundingBox.getSize().x/2,0- geometry.boundingBox.getSize().y/2,0 );
 
             this.geoms.push(geometry);
             this.pos.push(coords);
@@ -116,7 +120,7 @@ export class Cntrst extends Component {
             lane.position.z = 0;
 
             lane.position.x = mx;
-            lane.position.y = my + lane.geometry.boundingBox.min.y;
+            lane.position.y = my;
 
             let box = new THREE.BoxHelper(lane, 0xffff00);
             lane.geometry.computeBoundingBox();
@@ -134,7 +138,7 @@ export class Cntrst extends Component {
 
         });
         const lmaterial = new THREE.LineBasicMaterial( { color: 0xf0f0ff } );
-        const lineZ = 6.6;
+        const lineZ = 6.1;
         const points = [new THREE.Vector3(0,  0, lineZ )];
 
         laneCoords.forEach(coords => {
