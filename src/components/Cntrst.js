@@ -5,7 +5,7 @@ import LevelGenerator from "./LevelGenerator";
 import AssetLoader from "./AssetLoader";
 
 const style = {
-    height: "80vh" // we can control scene size by setting container dimensions
+    height: "95vh" // we can control scene size by setting container dimensions
 };
 
 const wellDepth = 60.0;
