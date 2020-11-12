@@ -3,32 +3,63 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import LevelGenerator from "./LevelGenerator";
 import AssetLoader from "./AssetLoader";
+import Mover from "./Mover";
 
 const style = {
     height: "95vh" // we can control scene size by setting container dimensions
 };
 
 const wellDepth = 60.0;
-const matColors = [0xff0000, 0x00ff00, 0x0000ff, 0x6f0050, 0x506f00, 0x00506f, 0xff0000, 0x00ff00, 0x0000ff, 0x6f0050, 0x506f00, 0x00506f, 0xff0000, 0x00ff00, 0x0000ff, 0x6f0050, 0x506f00, 0x00506f];
+const matColors = [0x506f00, 0x506f00]; //[0xff0000, 0x00ff00, 0x0000ff, 0x6f0050, 0x506f00, 0x00506f];
+const maxProjectiles = 3;
 
 export class Cntrst extends Component {
     constructor(props) {
         super(props);
-    
+        this.projectiles = [];
+
         this.state = { x: 0, y: 0, currentLane: 0 };
-      }
-    
-      _onMouseMove(e) {
-        let newLane = Math.floor(this.lanes.length * e.clientX/window.innerWidth);
-        if(newLane != this.state.currentLane){
-        console.log("new lane:", newLane);
+    }
+
+    _onKeyDown(e){
+        this.makeProjectile();
+    }
+    _onMouseMove(e) {
+        let newLane = Math.floor(this.lanes.length * e.clientX / window.innerWidth);
+        if (newLane != this.state.currentLane) {
+            // console.log("new lane:", newLane);
         }
-        this.setState({ x: e.clientX/window.innerWidth, y: e.clientY / window.innerHeight, currentLane: newLane});
+        let newX = e.clientX / window.innerWidth
+        this.setState({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight, currentLane: newLane });
         // console.log("window",  [window.innerWidth,  window.innerHeight ]);
         // console.log("mouse", [e.clientX, e.clientY ]);
         // console.log("mouse%", [this.state.x, this.state.y ]);
-      }
-    
+    }
+
+    makeProjectile(){
+        if(this.projectiles.length>=maxProjectiles){
+            return;
+        }
+        let projMesh = new THREE.Mesh(this.projectileGeometry, this.projectileMaterial);
+        projMesh.position.copy(this.playerMesh.position);
+        projMesh.position.z -= 3;
+        let proj = new Mover({mesh: projMesh, zMax: 0,
+            zMin: 0-wellDepth,
+            velocity: -1});
+        this.projectiles.push(proj);
+        this.scene.add(projMesh)
+    }
+
+    removeProjectile(proj){
+        let idx = this.projectiles.indexOf(proj);
+        if(idx<0){
+            return;
+        }
+
+        this.scene.remove(proj.state.mesh);
+        this.projectiles.splice(idx, 1);
+    }
+
     componentDidMount() {
         this.sceneSetup();
         this.addCustomSceneObjects();
@@ -51,9 +82,9 @@ export class Cntrst extends Component {
             75, // fov = field of view
             width / height, // aspect ratio
             0.1, // near plane
-            wellDepth* 3 // far plane
+            wellDepth * 3 // far plane
         );
-        this.camera.position.z = 15; // is used here to set some distance from a cube that is located at z = 0
+        this.camera.position.z = 20; // is used here to set some distance from a cube that is located at z = 0
 
         // OrbitControls allow a camera to orbit around the object
         // https://threejs.org/docs/#examples/controls/OrbitControls
@@ -70,30 +101,36 @@ export class Cntrst extends Component {
     addCustomSceneObjects = () => {
         // load player model
 
-        let playerEnvTexture = new THREE.TextureLoader().setPath("assets/").load('env4.jpg',  () => {
+        let playerEnvTexture = new THREE.TextureLoader().setPath("assets/").load('env4.jpg', () => {
             const rt = new THREE.WebGLCubeRenderTarget(playerEnvTexture.image.height);
             rt.fromEquirectangularTexture(this.renderer, playerEnvTexture);
             AssetLoader.loadGlTF("assets/player/", "scene.gltf").then((gltf) => {
-                this.playerGltf = gltf.scene.children[0];
+                this.playerMesh = gltf.scene.children[0];
 
                 gltf.scene.traverse((node) => {
-                     if(node.isMesh) {node.material.envMap = rt;
-                        this.playerGltf = node;
-                     console.log("node found", node, gltf);
-                     }
+                    if (node.isMesh) {
+                        node.material.envMap = rt;
+                        this.playerMesh = node;
+                        //console.log("node found", node, gltf);
+                    }
                 });
                 //this.scene.background = rt;
                 //console.log(gltf);
-                this.playerGltf.rotation.y = -1;
-                this.playerGltf.scale.set(0.05, 0.05, 0.05);
-                this.scene.add(this.playerGltf);
-                //let box = new THREE.BoxHelper(this.playerGltf, 0xffff00);
-                //this.scene.add(box);
+                //this.playerMesh = new THREE.Mesh(new THREE.BoxGeometry(6, 16, 3), new THREE.MeshBasicMaterial({color: "green", wireframe: true}));
+                this.playerMesh.geometry.center();
+                //this.playerMesh.add(new THREE.AxesHelper(95));
+                //this.playerMesh.rotation.y = -1;
+
+
+                this.playerMesh.scale.set(0.05, 0.05, 0.05);
+                this.scene.add(this.playerMesh);
+                // this.playerBox = new THREE.BoxHelper(this.playerMesh, 0xffff00);
+                // this.scene.add(this.playerBox);
 
             });
-    
-          });
-        
+
+        });
+
 
         const material = new THREE.MeshPhongMaterial({
             color: 0x156289,
@@ -107,10 +144,17 @@ export class Cntrst extends Component {
         var wireframeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ee00, wireframe: true, transparent: true });
         var multiMaterial = [darkMaterial, wireframeMaterial];
 
+        //3015249577836817
+        //6519134813074191
+        //6712787918007075
+        //2777320295011347
+        //4978183437841937
+        const laneCoords = LevelGenerator.generateMirrored(0, 0);
+        this.projectileGeometry = new THREE.OctahedronBufferGeometry(1);
+        this.projectileMaterial = new THREE.MeshBasicMaterial({ color: 0x880088 });
 
-        const laneCoords = LevelGenerator.generateMirrored();
-        console.log("Generated: ", laneCoords);
-        
+        //console.log("Generated: ", laneCoords);
+
         // [[2, 0],
         // [5, 4], // 129 deg, 5' len
         // [9, 6],  // 153 deg, 4.5' len
@@ -122,8 +166,8 @@ export class Cntrst extends Component {
         // [-2, 0]
         // ];
 
-        var laneX = laneCoords[laneCoords.length-1][0];
-        var laneY = laneCoords[laneCoords.length-1][1];
+        var laneX = laneCoords[laneCoords.length - 1][0];
+        var laneY = laneCoords[laneCoords.length - 1][1];
         const endX = 10;
         const endY = 10;
 
@@ -132,13 +176,11 @@ export class Cntrst extends Component {
         this.rot = [];
         this.lanes = [];
         this.laneMaterials = [];
-        
 
-        var colorctr = 0;
 
         const getAngle = (anchor, point) => Math.atan2(anchor.y - point.y, anchor.x - point.x);
 
-        this.lanesGroup =  new THREE.Group();
+        this.lanesGroup = new THREE.Group();
 
         laneCoords.forEach(coords => {
             let mx = coords[0];
@@ -148,14 +190,14 @@ export class Cntrst extends Component {
             let dy = laneY - my;
 
             let len = Math.sqrt(dx * dx + dy * dy);
-            console.log(len, " len from ", coords)
-            var geometry = new THREE.BoxBufferGeometry(0.0, len, wellDepth);
+            //console.log(len, " len from ", coords)
+            var geometry = new THREE.BoxBufferGeometry(0.05, len, wellDepth);
             geometry.computeBoundingBox();
             //console.log("size", geometry.boundingBox.getSize());
-           
-            geometry.translate(0-geometry.boundingBox.getSize().x/2,
-                                0- geometry.boundingBox.getSize().y/2,
-                                0- geometry.boundingBox.getSize().z /2 );
+
+            geometry.translate(0 - geometry.boundingBox.getSize().x / 2,
+                0 - geometry.boundingBox.getSize().y / 2,
+                0 - geometry.boundingBox.getSize().z / 2);
 
             this.geoms.push(geometry);
             this.pos.push(coords);
@@ -163,15 +205,16 @@ export class Cntrst extends Component {
 
             this.rot.push(angle);
             //console.log(colorctr)
-            let mat = new THREE.MeshPhongMaterial({
-                color: matColors[colorctr],
-                emissive: matColors[colorctr++],
+            let matColor = matColors[this.lanes.length % matColors.length];
+            let mat = new THREE.MeshStandardMaterial({
+                color: matColor,
+                emissive: matColor,
                 side: THREE.DoubleSide,
                 flatShading: true,
                 transparent: true
             });
 
-            
+
             let lane = new THREE.Mesh(geometry, mat);
 
             //lane.rotation.x = 1.5;
@@ -182,44 +225,41 @@ export class Cntrst extends Component {
             //lane.rotation.y = 0;
             lane.position.z = 0;
 
-            lane.position.x = mx;
-            lane.position.y = my;
+            laneX = lane.position.x = mx;
+            laneY = lane.position.y = my;
 
-            let box = new THREE.BoxHelper(lane, 0xffff00);
-            lane.geometry.computeBoundingBox();
-            //console.log(colorctr, lane.geometry.boundingBox);
-
-
-                laneX = mx;
-                laneY = my;
-            //console.log("coords", laneX, laneY);
-
+            const edges = new THREE.EdgesGeometry(geometry);
+            const outline = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: matColor, side: THREE.BackSide }));
+            outline.position.copy(lane.position);
+            outline.rotation.copy(lane.rotation);
             this.lanes.push(lane);
             this.laneMaterials.push(mat);
             this.lanesGroup.add(lane);
+            this.lanesGroup.add(outline);
             ///this.scene.add(box);
 
 
         });
 
-        
+
         this.scene.add(this.lanesGroup);
         let groupBox = new THREE.Box3().setFromObject(this.lanesGroup);
-       // console.log("group size", groupBox.getSize());
-        this.camera.position.y =  groupBox.getSize().y/2;
-        this.controls.target.set(0, groupBox.getSize().y/2 + 2, -3)
+        // console.log("group size", groupBox.getSize());
+        this.camera.position.y = groupBox.getSize().y / 1.5;
+        console.log("cy", this.camera.position.y, groupBox.getSize().y)
+        this.controls.target.set(0, groupBox.getSize().y / 1.5, -3)
         this.controls.update();
-        const lmaterial = new THREE.LineBasicMaterial( { color: 0xf0f0ff } );
-        const lineZ = 0.1;
-        const points = [new THREE.Vector3(0,  0, lineZ )];
+        // const lmaterial = new THREE.LineBasicMaterial( { color: 0xf0f0ff } );
+        // const lineZ = 0.1;
+        // const points = [];
 
-        laneCoords.forEach(coords => {
-            points.push( new THREE.Vector3(coords[0], coords[1], lineZ ) );
-        });
+        // laneCoords.forEach(coords => {
+        //     points.push( new THREE.Vector3(coords[0], coords[1], lineZ ) );
+        // });
 
-        const lgeometry = new THREE.BufferGeometry().setFromPoints( points );
-        const line = new THREE.Line( lgeometry, lmaterial );
-        this.scene.add(line);
+        // const lgeometry = new THREE.BufferGeometry().setFromPoints( points );
+        // const line = new THREE.Line( lgeometry, lmaterial );
+        // this.scene.add(line);
 
         const lights = [];
         lights[0] = new THREE.PointLight(0xffffff, 1, 0);
@@ -233,34 +273,49 @@ export class Cntrst extends Component {
         this.scene.add(lights[0]);
         this.scene.add(lights[1]);
         this.scene.add(lights[2]);
-        this.scene.add( new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 ));
+        this.scene.add(new THREE.HemisphereLight(0xffffbb, 0x080820, 1));
         // this.scene.environment = playerEnvTexture
     };
 
     startAnimationLoop = () => {
         // this.cube.rotation.x += 0.01;
         // this.cube.rotation.y += 0.01;
-
+        this.projectiles.map((proj) => {proj.update(); if(proj.state.cull){this.removeProjectile(proj)}});
 
         for (let i = 0; i < this.lanes.length; i++) {
             const lane = this.lanes[i];
-            if(lane!= this.lanes[this.state.currentLane]){
-                    lane.material.opacity = 0.05;
-            }else{
+            if (lane != this.lanes[this.state.currentLane]) {
+                lane.material.opacity = 0.1;
+            } else {
                 lane.material.opacity = 1.0;
-                if(this.playerGltf){
-                    console.log("lane pos", lane.position);
-                    this.playerGltf.position.x = lane.position.x;
-                    this.playerGltf.position.y = lane.position.y;
-                    this.playerGltf.rotation.z = lane.rotation.z;
+                if (this.playerMesh) {  
+                    lane.geometry.computeBoundingBox();
+                    //console.log("lane pos", lane.position);
+                    const laneBox = new THREE.Box3();
+
+                    laneBox.copy(lane.geometry.boundingBox).applyMatrix4(lane.matrixWorld);
+
+                    const laneCenter = new THREE.Vector3();
+                    laneBox.getCenter(laneCenter);
+
+                    this.playerMesh.position.x = laneCenter.x;
+                    this.playerMesh.position.y = laneCenter.y;
+                    this.playerMesh.rotation.z = lane.rotation.z - Math.PI;
+                    // //this.playerMesh.rotation.z += 0.01;
+                    // this.playerMesh.rotation.x = -1;
+                    // this.playerBox.update();
+
+                    //this.playerMesh.rotation.x -= 0.01;
+
+
                 }
+            }
         }
-        }
 
 
-//        this.lanes[this.state.currentLane].opacity= 1.0;
+        //        this.lanes[this.state.currentLane].opacity= 1.0;
 
-       // console.log("target", this.controls.target);
+        // console.log("target", this.controls.target);
 
         this.renderer.render(this.scene, this.camera);
 
@@ -285,7 +340,7 @@ export class Cntrst extends Component {
     };
     render() {
         return (
-            <div style={style} ref={ref => (this.el = ref)}  onMouseMove={this._onMouseMove.bind(this)} />
+            <div style={style} ref={ref => (this.el = ref)} onMouseMove={this._onMouseMove.bind(this)} onKeyDown={this._onKeyDown.bind(this)} />
         )
     }
 }
