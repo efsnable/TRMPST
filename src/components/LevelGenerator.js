@@ -18,8 +18,8 @@ export class LevelGenerator extends Component {
         var lastY = 0;
 
         while (lanes.length < numLanes - 1) {
-            let x = ran.core.int(3,7);
-            let y = ran.core.int(3,7);
+            let x = ran.core.int(3, 7);
+            let y = ran.core.int(3, 7);
             if (lanes.length <= 0) {
                 x = 0;
             }
@@ -37,12 +37,12 @@ export class LevelGenerator extends Component {
     };
 
     static generateMirrored = (numLanesPerSide, preSeed) => {
-        var seed = preSeed?parseInt(preSeed):Math.floor(Math.random()  * Number.MAX_SAFE_INTEGER);
-        console.log("Level seed: ",seed);
+        var seed = preSeed ? parseInt(preSeed) : Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+        console.log("Level seed: ", seed);
         ran.core.seed(seed);
 
         if (!numLanesPerSide) {
-            numLanesPerSide = ran.core.int(defaultLanes-3, defaultLanes);
+            numLanesPerSide = ran.core.int(defaultLanes - 3, defaultLanes);
         }
         var lanes = this.generate(numLanesPerSide);
         for (let i = numLanesPerSide - 2; i > 0; i--) {
@@ -54,7 +54,7 @@ export class LevelGenerator extends Component {
         lanes.push(lanes.shift());
 
         console.log("lanes: ", lanes)
-        return lanes;
+        return [seed, lanes];
     };
 }
 

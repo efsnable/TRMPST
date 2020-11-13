@@ -5,9 +5,33 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #c0c0c0;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+kbd {
+  background-color: #dedede;
+  border: 1px solid #202020;
+  border-radius: 1em;
+  color: #a00;
+  min-width: 2em;
+  min-height: 1.3em;
+  display: inline-block;
+  text-shadow: none;
+}
+sub{
+  font-size: 0.5em;
+}
+
+.loss {
+  background-image: url(assets/enemy/vhs-f.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-blend-mode: darken;
+  background-position: center;
+  text-shadow: 3px 2px 2px black;
 }
